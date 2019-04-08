@@ -1,0 +1,165 @@
+刚学完JSP的基础部分，结合在java部分学的JDBC和书本上的内容，便把两个结合起来做了个简单的用户登录程序。
+程序的实现思路：创建一个表单页，在这个页面可以输入用户登录的ID和密码，再将这些信息提交到JSP页面上进行验证，若查询到该用户的信息并正确，此时跳转到成功登录的页面，如果验证不通过，则跳转到错误页进行显示。
+
+mysql数据库：
+
+USE mldn;
+ DROP TABLE IF EXISTS user;
+ 
+ CREATE TABLE user(
+	userid  VARCHAR(30) PRIMARY KEY,
+	name  VARCHAR(30) NOT NULL,
+	password VARCHAR(32) NOT NULL
+ )
+ 
+ SELECT *from user;
+ 
+ INSERT INTO user(userid,name,password) VALUES ('admin','administrator','admin');
+
+登录表单页：login.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="GBK">
+  <title>Title</title>
+</head>
+  <body>
+  <center>
+    <h1>登录操作</h1>
+    <hr>
+    <form action = "login_check.jsp" method="post">
+      <table border="1">
+        <tr>
+          <td colspan="2">用户登录</td>
+        </tr>
+        <tr>
+          <td>登录ID:</td>
+          <td><input type = "text" name = "id"></td>
+        </tr>
+        <tr>
+          <td>登录密码:</td>
+          <td><input type = "password" name = "password"></td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <input type = "submit" value="登录">
+            <input type = "reset" value="重置">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </center>
+  </body>
+</html>
+
+登录验证页面：login_check.jsp
+
+<%--
+  Created by IntelliJ IDEA.
+  User: Chenzh
+  Date: 2019/2/20
+  Time: 20:40
+  To change this template use File | Settings | File Templates.
+--%>
+<%@ page contentType="text/html" language="java" import="java.sql.*"%>
+
+<html>
+<head>
+    <%--<meta charset="UTF-8">--%>
+    <title>Title</title>
+</head>
+<body>
+    <%!
+        public static final String DBDRIVER = "com.mysql.jdbc.Driver";     /*定义数据库的驱动程序*/
+        public static final String DBURL = "jdbc:mysql://localhost/mldn?useSSL=false";/*数据库的连接地址*/
+        public static final String DBUSER = "root";/*数据库的连接用户名*/
+        public static final String DBPASS = "1234";/*数据库的密码*/
+    %>
+    <%
+        Connection conn = null;/*申明数据库的连接对象*/
+        PreparedStatement pstmt = null;/*申明数据库操作*/
+        ResultSet rs = null;/*申明数据库的结果集*/
+        boolean flag = false;/*定义标志位，方便判断是否登录成功，跳转到指定页面*/
+        String name = null;/*接受用户的姓名*/
+    %>
+    <%
+        try {
+            Class.forName(DBDRIVER);/*加载数据库的驱动程序*/
+            conn = DriverManager.getConnection(DBURL, DBUSER, DBPASS);/*取得数据库的连接*/
+            String sql = "SELECT name FROM user WHERE userid = ? AND password = ?";/*SQL查询语句*/
+            pstmt = conn.prepareStatement(sql);/*实例化数据库的操作对象*/
+            pstmt.setString(1, request.getParameter("id"));/*设置查询所需要的内容*/
+            pstmt.setString(2, request.getParameter("password"));
+            rs = pstmt.executeQuery();/*执行查询*/
+            if (rs.next()) {/*如果查询到了，则表示正确的用户*/
+                name = rs.getString(1);/*取出姓名*/
+                flag = true;
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        finally {
+            try{
+                /*正着打开，倒着关闭（22行-24行）*/
+                rs.close();
+                pstmt.close();
+                conn.close();
+            }catch (Exception e){}
+        }
+    %>
+    <%
+        if (flag) {/*成功，则跳转到成功登录页*/
+    %>
+        <jsp:forward page="login_success.jsp"><%--服务器端跳转--%>
+            <jsp:param name="uname" value="<%=name%>"/><%--携带参数name--%>
+        </jsp:forward>
+    <%
+        }else{
+    %>
+        <jsp:forward page="failure.html"/>
+    <%
+        }
+    %>
+</body>
+</html>
+
+成功登录页面：login_success.jsp
+
+<%--
+  Created by IntelliJ IDEA.
+  User: Chenzh
+  Date: 2019/2/20
+  Time: 20:41
+  To change this template use File | Settings | File Templates.
+--%>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <center>
+        <h1>登录操作</h1><hr>
+        <h2>登录成功</h2>
+        <h2>欢迎<font color="red"><%=request.getParameter("uname")%></font>光临！</h2>
+    </center>
+</body>
+</html>
+
+登录失败页面：failure.jsp
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="GBK">
+  <title>Title</title>
+</head>
+<body>
+  <center>
+    <h1>登录操作</h1>
+    <h2>登陆失败，请重试<a href="index.html">登录</a>!</h2>
+  </center>
+</body>
+</html>
